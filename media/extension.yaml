@@ -1,0 +1,16 @@
+name: media
+version: 1.0.0
+summary: Audio and video with ffmpeg and ffprobe 7.0.2 (static builds, GPL)
+install:
+  - sh fetch.sh
+bin: [bin/ffmpeg, bin/ffprobe]
+# Probing only reads; ffmpeg writes files, so it keeps asking unless the admin allows it.
+rules: ["ffprobe *"]
+skills: [skills/media]
+requires:
+  secrets: []
+  network: false
+instructions: |
+  For audio and video use `ffmpeg` and `ffprobe`, already installed; never install them.
+  Load the `media` skill first. A render longer than a few seconds runs as a background
+  job, and every output goes in your folder, never in /tmp.

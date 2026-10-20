@@ -1,0 +1,22 @@
+name: office
+version: 1.0.0
+summary: Word, Excel and PowerPoint files, created, read and edited with OfficeCLI 1.0.158
+install:
+  - sh fetch.sh
+bin: [bin/officecli]
+env:
+  # No update checks: the binary is pinned and hashed, and a project has no business
+  # reaching OfficeCLI's servers.
+  OFFICECLI_SKIP_UPDATE: "1"
+  # The image has no ICU; OfficeCLI fails at start without this.
+  DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
+  # Every command writes to disk: a resident the shell stops loses nothing.
+  OFFICECLI_RESIDENT_FLUSH: each
+rules: ["officecli *"]
+skills: [skills/office]
+requires:
+  secrets: []
+  network: false
+instructions: |
+  For .docx, .xlsx and .pptx files use `officecli`, already installed; never write them
+  by hand or with a script, and never install anything. Load the `office` skill first.
