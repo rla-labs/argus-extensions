@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The security policy of the images extension, found before the build's own.
+  - No delegates: ImageMagick never runs another program (Ghostscript, curl, …).
+  - Formats that run code, read other files or reach the network are refused: MVG and
+    MSL (drawing and scripting languages), URL/HTTP/HTTPS/FTP, EPHEMERAL, TEXT, and
+    PostScript, PDF and XPS (the pdf extension handles PDFs).
+  - No "@file" arguments: a filename list read from a file.
+  - Resource limits, so one large or hostile image cannot take the server's memory,
+    disk or time.
+-->
+<policymap>
+  <policy domain="resource" name="memory" value="512MiB"/>
+  <policy domain="resource" name="map" value="1GiB"/>
+  <policy domain="resource" name="disk" value="2GiB"/>
+  <policy domain="resource" name="area" value="128MP"/>
+  <policy domain="resource" name="width" value="16KP"/>
+  <policy domain="resource" name="height" value="16KP"/>
+  <policy domain="resource" name="time" value="120"/>
+  <policy domain="resource" name="thread" value="2"/>
+  <policy domain="delegate" rights="none" pattern="*"/>
+  <policy domain="coder" rights="none" pattern="{MVG,MSL,URL,HTTP,HTTPS,FTP,EPHEMERAL,TEXT,PS,PS2,PS3,EPS,EPI,EPSF,EPSI,EPT,PDF,PDFA,AI,XPS}"/>
+  <policy domain="path" rights="none" pattern="@*"/>
+</policymap>

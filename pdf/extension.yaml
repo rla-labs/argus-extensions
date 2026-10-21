@@ -1,0 +1,20 @@
+name: pdf
+version: 1.0.0
+summary: PDFs read, merged, split, rotated, rendered and protected with pdftool (pikepdf, pypdf, pypdfium2)
+install:
+  - sh fetch.sh
+bin: [bin/pdftool, bin/pdf-python]
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONNOUSERSITE: "1"
+# Reading never changes a file; every other command writes a new one and keeps asking.
+rules: ["pdftool info *", "pdftool text *"]
+skills: [skills/pdf]
+requires:
+  secrets: []
+  network: false
+instructions: |
+  For PDF files use `pdftool`, already installed (info, text, merge, split, pages, rotate,
+  to-png, compress, encrypt, decrypt, metadata); for anything else, a script run with
+  `pdf-python`, which has pikepdf, pypdf and pypdfium2. Never install Python packages.
+  Load the `pdf` skill first.

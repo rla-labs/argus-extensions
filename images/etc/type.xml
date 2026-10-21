@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<typemap>
+  <type name="Helvetica" fullname="DejaVu Sans" family="Helvetica" style="Normal" stretch="Normal" weight="400" glyphs="/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"/>
+  <type name="Arial" fullname="DejaVu Sans" family="Arial" style="Normal" stretch="Normal" weight="400" glyphs="/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"/>
+  <type name="DejaVu-Sans" fullname="DejaVu Sans" family="DejaVu Sans" style="Normal" stretch="Normal" weight="400" glyphs="/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"/>
+  <type name="DejaVu-Sans-Bold" fullname="DejaVu Sans Bold" family="DejaVu Sans" style="Normal" stretch="Normal" weight="700" glyphs="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"/>
+</typemap>

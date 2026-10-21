@@ -1,0 +1,7 @@
+#!/bin/sh
+# ImageMagick 7, from the extension's folder, under the extension's security policy.
+here=$(dirname "$(readlink -f "$0")")/..
+MAGICK_HOME="$here/im" \
+MAGICK_CONFIGURE_PATH="$here/etc:$here/im/lib/ImageMagick-7.1.2/config-Q16HDRI:$here/im/etc/ImageMagick-7:$here/im/share/ImageMagick-7" \
+LD_LIBRARY_PATH="$here/im/lib:$here/im/lib/ImageMagick-7.1.2/modules-Q16HDRI/coders" \
+exec "$here/im/bin/magick" "$@"

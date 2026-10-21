@@ -1,0 +1,16 @@
+name: images
+version: 1.0.0
+summary: Images resized, cropped, converted, compressed and watermarked with ImageMagick 7.1.2 (x64)
+install:
+  - sh fetch.sh
+bin: [bin/magick]
+# Identifying only reads; every other command writes a file and keeps asking.
+rules: ["magick identify *"]
+skills: [skills/images]
+requires:
+  secrets: []
+  network: false
+instructions: |
+  For images (resize, crop, convert, compress, watermark, contact sheets) use `magick`
+  (ImageMagick 7), already installed; never install another tool. Load the `images`
+  skill first. Write every output in your folder, never over the original.
