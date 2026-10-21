@@ -1,0 +1,16 @@
+name: diagrams
+version: 1.0.0
+summary: Mermaid diagrams to SVG, PNG or text with Pretty Mermaid, no browser
+install:
+  - sh fetch.sh
+bin: [bin/render-mermaid, bin/batch-mermaid, bin/list-mermaid-themes]
+# Rendering reads a .mmd and writes the image the agent names; listing themes only reads.
+rules: ["render-mermaid *", "list-mermaid-themes *"]
+skills: [skills/diagrams]
+requires:
+  secrets: []
+  network: false
+instructions: |
+  For diagrams (flowcharts, sequence, state, class, ER, XY charts) write Mermaid in a
+  .mmd file and render it with `render-mermaid`, already installed; never install a
+  renderer or a browser. Load the `diagrams` skill first.

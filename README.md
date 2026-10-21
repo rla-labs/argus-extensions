@@ -9,8 +9,9 @@ installed once by the admin and enabled per project.
 |---|---|---|---|
 | [**office**](office/) | Create, read, check and edit Word, Excel and PowerPoint files, existing documents included: reports, invoices, spreadsheets with formulas and charts, slide decks | `officecli` ([OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) 1.0.158) | ~35 MB |
 | [**media**](media/) | Cut, join, convert and compress audio and video; extract audio, thumbnails, GIFs and subtitles; inspect any media file | `ffmpeg`, `ffprobe` 7.0.2 (static) | ~160 MB |
+| [**diagrams**](diagrams/) | Flowcharts, sequence, state, class and ER diagrams and XY charts, from Mermaid to SVG, PNG or text, in 15 themes, with no browser | `render-mermaid`, `batch-mermaid`, `list-mermaid-themes` ([Pretty Mermaid](https://github.com/imxv/Pretty-mermaid-skills)) | ~22 MB |
 
-Both need **Argus 0.7.0 or later**, on Linux x64 or arm64, with the command sandbox
+Each needs **Argus 0.7.0 or later**, on Linux x64 or arm64, with the command sandbox
 (Landlock) available; `argus doctor` says whether it is.
 
 ## Install
@@ -22,7 +23,8 @@ From Telegram or the web chat, as the admin:
 /ext enable <project> office
 ```
 
-`#office` names the extension's folder in this repository; use `#media` for media.
+`#office` names the extension's folder in this repository; use `#media`, `#diagrams`, …
+for the others.
 Argus shows what the extension brings and asks before anything runs. After
 `/ext enable`, the project's next conversation has the programs and the skill
 (`/reset <project>` starts one now).
@@ -62,7 +64,7 @@ repository, and each extension records its own `version` in its `extension.yaml`
 - **Per project.** Only a project that enabled an extension can run its programs, and
   they are confined to that project's folder like any other command. Other projects
   cannot run them, not even by their path.
-- **Offline at run time.** Neither program needs the network or any secret once it is
+- **Offline at run time.** No program needs the network or any secret once it is
   installed.
 
 ## Limits
@@ -90,4 +92,6 @@ To update a program: change its version and hashes in `fetch.sh`, raise `version
 - **The ffmpeg builds** are GPL v3. This repository does not contain them: each
   admin's install downloads them from their publisher. See
   [`media/third-party/ffmpeg/`](media/third-party/ffmpeg/).
+- **Pretty Mermaid** is MIT and **Inter** is under the SIL Open Font License 1.1; see
+  [`diagrams/third-party/`](diagrams/third-party/).
 - **Everything else** is under the same license as Argus ([`LICENSE.md`](LICENSE.md)).

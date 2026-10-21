@@ -1,0 +1,4 @@
+#!/bin/sh
+# Pretty Mermaid's scripts/batch.mjs, with the font its PNG output uses.
+here=$(dirname "$(readlink -f "$0")")
+DIAGRAMS_FONT="$here/../fonts/InterVariable.ttf" exec node "$here/../app/scripts/batch.mjs" "$@"
