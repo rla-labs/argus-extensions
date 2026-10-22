@@ -21,4 +21,11 @@ officecli add report.docx /body --type paragraph --prop text="Adăugat după."
 officecli close report.docx >/dev/null 2>&1 || true
 officecli view report.docx text | grep -q "Adăugat după."
 officecli view report.docx html >/dev/null
+# Rendered by the headless Chrome, and printed to PDF.
+officecli view report.docx screenshot -o report.png >/dev/null
+test -s report.png
+officecli view deck.pptx screenshot -o deck.png >/dev/null
+ls deck*.png >/dev/null
+office-pdf report.docx -o report.pdf
+head -c 5 report.pdf | grep -q '%PDF-'
 echo "office smoke: ok"

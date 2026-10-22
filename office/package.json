@@ -1,0 +1,8 @@
+{
+  "name": "argus-extension-office",
+  "private": true,
+  "description": "extract-zip, pinned, to unpack Chrome Headless Shell at install (the image has no unzip)",
+  "dependencies": {
+    "extract-zip": "2.0.1"
+  }
+}

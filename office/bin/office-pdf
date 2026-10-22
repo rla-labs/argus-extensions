@@ -1,0 +1,20 @@
+#!/bin/sh
+# office-pdf <file.docx|.pptx|.xlsx> [-o out.pdf]: OfficeCLI's HTML preview of the file,
+# printed to PDF by this extension's headless Chrome. The layout is the preview's.
+set -eu
+here=$(dirname "$(readlink -f "$0")")
+if [ $# -lt 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+  echo "usage: office-pdf <file.docx|.pptx|.xlsx> [-o out.pdf]" >&2
+  exit 2
+fi
+in=$1
+out="${in%.*}.pdf"
+if [ "${2:-}" = "-o" ] && [ -n "${3:-}" ]; then out=$3; fi
+[ -f "$in" ] || { echo "office-pdf: no file $in" >&2; exit 1; }
+html=$(mktemp "${TMPDIR:-/tmp}/office-pdf-XXXXXX")
+trap 'rm -f "$html" "$html.html"' EXIT
+"$here/officecli" view "$in" html -o "$html.html" >/dev/null
+target=$(realpath -m "$out")
+"$here/../chromium/chrome-headless-shell" --no-sandbox --disable-gpu --no-pdf-header-footer --print-to-pdf="$target" "file://$html.html" >/dev/null 2>&1
+[ -s "$target" ] || { echo "office-pdf: the PDF was not written" >&2; exit 1; }
+echo "wrote $out"

@@ -1,9 +1,10 @@
 name: office
-version: 1.0.0
-summary: Word, Excel and PowerPoint files, created, read and edited with OfficeCLI 1.0.158
+version: 1.1.0
+summary: Word, Excel and PowerPoint files, created, read, edited, rendered and exported to PDF with OfficeCLI 1.0.158
 install:
   - sh fetch.sh
-bin: [bin/officecli]
+# google-chrome: the headless Chrome OfficeCLI looks for on PATH, for screenshots.
+bin: [bin/officecli, bin/office-pdf, bin/google-chrome]
 env:
   # No update checks: the binary is pinned and hashed, and a project has no business
   # reaching OfficeCLI's servers.
@@ -12,7 +13,7 @@ env:
   DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: "1"
   # Every command writes to disk: a resident the shell stops loses nothing.
   OFFICECLI_RESIDENT_FLUSH: each
-rules: ["officecli *"]
+rules: ["officecli *", "office-pdf *"]
 skills: [skills/office]
 requires:
   secrets: []

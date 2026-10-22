@@ -1,0 +1,5 @@
+#!/bin/sh
+# OfficeCLI renders screenshots with a headless Chrome it looks for on PATH as
+# google-chrome: this extension's own Chrome Headless Shell.
+here=$(dirname "$(readlink -f "$0")")
+exec "$here/../chromium/chrome-headless-shell" "$@"
