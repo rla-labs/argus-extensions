@@ -1,0 +1,9 @@
+{
+  "name": "argus-extension-browser",
+  "private": true,
+  "description": "Playwright MCP, pinned, for the browser extension; installed by fetch.sh with npm ci",
+  "dependencies": {
+    "@playwright/mcp": "0.0.83",
+    "extract-zip": "2.0.1"
+  }
+}

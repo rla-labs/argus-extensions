@@ -1,0 +1,53 @@
+name: browser
+version: 1.0.0
+summary: A headless Chromium the agent drives with Playwright MCP, reaching the public internet only
+install:
+  - sh fetch.sh
+mcp:
+  browser:
+    command: node
+    # In memory (--isolated): no cookies or logins kept between sessions. Screenshots and
+    # PDFs go to the project's folder (its working directory). --no-sandbox: Docker's
+    # seccomp blocks Chromium's own sandbox; Argus's command sandbox confines it.
+    args:
+      - ${EXTENSION_DIR}/node_modules/@playwright/mcp/cli.js
+      - --headless
+      - --isolated
+      - --no-sandbox
+      - --executable-path
+      - ${EXTENSION_DIR}/chromium/chrome-headless-shell
+      - --output-dir
+      - .
+      - --caps
+      - pdf
+      - --proxy-bypass
+      - <-loopback>
+      - --config
+      - ${EXTENSION_DIR}/config.json
+    env:
+      # Every request, loopback included, through Argus's egress proxy: the public
+      # internet only, never the server, its network or the metadata service.
+      PLAYWRIGHT_MCP_PROXY_SERVER: ${ARGUS_EGRESS_PROXY}
+    access: ask
+    tools:
+      # Reading the page runs unasked; what acts on it asks; code in the page and
+      # uploads from the project are refused. A project can change any of them.
+      browser_snapshot: allow
+      browser_take_screenshot: allow
+      browser_console_messages: allow
+      browser_network_requests: allow
+      browser_network_request: allow
+      browser_find: allow
+      browser_wait_for: allow
+      browser_evaluate: deny
+      browser_run_code_unsafe: deny
+      browser_file_upload: deny
+    timeout_s: 120
+skills: [skills/browser]
+requires:
+  secrets: []
+  network: true
+instructions: |
+  You have a headless browser (tools mcp__browser__…). Use it for pages web_fetch cannot
+  read: ones built by JavaScript, or behind clicks and forms. Load the `browser` skill
+  first. It reaches the public internet only.
