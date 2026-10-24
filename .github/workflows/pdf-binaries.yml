@@ -1,0 +1,58 @@
+# pdf's native binaries (ironpress with our outline fix, qpdf with native crypto), built
+# on glibc 2.28 for x64 and arm64 by pdf/build/build.sh, and published as the assets of a
+# release named after the tag, with their sha-256. pdf/fetch.sh pins those hashes.
+#
+# A tag pdf-bin-<n> builds and publishes; a change to the build on main, a pull request or
+# a manual run only builds.
+name: pdf binaries
+
+on:
+  push:
+    tags: ['pdf-bin-*']
+    branches: [main]
+    paths: ['pdf/build/**', '.github/workflows/pdf-binaries.yml']
+  pull_request:
+    paths: ['pdf/build/**', '.github/workflows/pdf-binaries.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build on manylinux_2_28 (glibc 2.28)
+        run: docker run --rm -v "$PWD:/src" -w /src quay.io/pypa/manylinux_2_28_${{ matrix.arch }} pdf/build/build.sh out
+      - name: Pack
+        run: |
+          sudo chown -R "$(id -u)" out
+          tar -C out/${{ matrix.arch }} -cJf pdf-bin-linux-${{ matrix.arch }}.tar.xz .
+          sha256sum pdf-bin-linux-${{ matrix.arch }}.tar.xz | tee pdf-bin-linux-${{ matrix.arch }}.tar.xz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pdf-bin-${{ matrix.arch }}
+          path: pdf-bin-linux-${{ matrix.arch }}.tar.xz*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/pdf-bin-')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "pdf's native binaries for pdf/fetch.sh: ironpress and qpdf, built on glibc 2.28 by pdf/build/build.sh. Each archive's sha-256 is beside it." pdf-bin-linux-*

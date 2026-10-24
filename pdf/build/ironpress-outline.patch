@@ -1,0 +1,66 @@
+diff -ru src.orig/render/pdf/mod.rs src/render/pdf/mod.rs
+--- src.orig/render/pdf/mod.rs	2026-10-24 08:51:15.538446042 +0300
++++ src/render/pdf/mod.rs	2026-10-24 08:51:21.309686007 +0300
+@@ -154,7 +154,7 @@
+     gradient_layer_pattern, paint_css_box_pattern, paint_css_page_pattern, paint_distributed_tiles,
+     paint_shading_pattern, paint_tiling_pattern,
+ };
+-use pdf_text::{build_tounicode_cmap, escape_pdf_string};
++use pdf_text::{build_tounicode_cmap, escape_pdf_string, pdf_text_string};
+ #[allow(unused_imports)]
+ pub(crate) use pdf_text::{
+     encode_pdf_text, is_winansi_char, is_winansi_encodable, utf8_to_winansi,
+diff -ru src.orig/render/pdf/pdf_text.rs src/render/pdf/pdf_text.rs
+--- src.orig/render/pdf/pdf_text.rs	2026-10-24 08:51:15.538788573 +0300
++++ src/render/pdf/pdf_text.rs	2026-10-24 08:51:21.311475682 +0300
+@@ -100,6 +100,21 @@
+     result
+ }
+ 
++/// A PDF text string, delimiters included: a literal `(...)` when the text is
++/// printable ASCII, otherwise UTF-16BE with a byte-order mark as `<FEFF...>`
++/// (PDF 32000-1 §7.9.2.2), since raw UTF-8 bytes are read as PDFDocEncoding.
++pub(super) fn pdf_text_string(s: &str) -> String {
++    if s.bytes().all(|b| (0x20..=0x7E).contains(&b)) {
++        return format!("({})", escape_pdf_string(s));
++    }
++    let mut hex = String::from("<FEFF");
++    for unit in s.encode_utf16() {
++        hex.push_str(&format!("{unit:04X}"));
++    }
++    hex.push('>');
++    hex
++}
++
+ pub(super) fn escape_pdf_string(s: &str) -> String {
+     s.replace('\\', "\\\\")
+         .replace('(', "\\(")
+@@ -139,3 +154,14 @@
+     );
+     cmap
+ }
++
++#[cfg(test)]
++mod text_string_tests {
++    use super::pdf_text_string;
++
++    #[test]
++    fn ascii_stays_literal_and_unicode_becomes_utf16be() {
++        assert_eq!(pdf_text_string("A (b)"), "(A \\(b\\))");
++        assert_eq!(pdf_text_string("Ș"), "<FEFF0218>");
++    }
++}
+diff -ru src.orig/render/pdf/writer_output.rs src/render/pdf/writer_output.rs
+--- src.orig/render/pdf/writer_output.rs	2026-10-24 08:51:15.539356102 +0300
++++ src/render/pdf/writer_output.rs	2026-10-24 08:51:15.550513852 +0300
+@@ -538,8 +538,8 @@
+                 let page_obj_id = self.page_ids.get(bm.page_index).copied().unwrap_or(1);
+ 
+                 let mut entry = format!(
+-                    "{entry_id} 0 obj\n<< /Title ({title}) /Parent {root_id} 0 R /Dest [{page_obj_id} 0 R /XYZ 0 {dest_y} 0]",
+-                    title = escape_pdf_string(&bm.title),
++                    "{entry_id} 0 obj\n<< /Title {title} /Parent {root_id} 0 R /Dest [{page_obj_id} 0 R /XYZ 0 {dest_y} 0]",
++                    title = pdf_text_string(&bm.title),
+                     dest_y = bm.y_pos,
+                 );
+                 if i > 0 {
