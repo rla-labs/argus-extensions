@@ -55,4 +55,5 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "pdf's native binaries for pdf/fetch.sh: ironpress and qpdf, built on glibc 2.28 by pdf/build/build.sh. Each archive's sha-256 is beside it." pdf-bin-linux-*
+        run: |
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "pdf's native binaries for pdf/fetch.sh, ironpress and qpdf, built on glibc 2.28 by pdf/build/build.sh. Each archive's sha-256 is beside it." pdf-bin-linux-*
