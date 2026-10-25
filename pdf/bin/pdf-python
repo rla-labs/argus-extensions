@@ -1,5 +1,0 @@
-#!/bin/sh
-# The extension's Python 3.12, with pikepdf, pypdf, pypdfium2 and Pillow, for a script
-# pdftool has no command for.
-here=$(dirname "$(readlink -f "$0")")
-exec "$here/../python/bin/python3" -I -B "$@"

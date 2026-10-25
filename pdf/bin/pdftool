@@ -1,4 +1,0 @@
-#!/bin/sh
-# pdftool: the PDF operations, on the extension's own Python.
-here=$(dirname "$(readlink -f "$0")")
-exec "$here/../python/bin/python3" -I -B "$here/../pdftool.py" "$@"

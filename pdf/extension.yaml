@@ -1,12 +1,9 @@
 name: pdf
-version: 1.0.0
-summary: PDFs read, merged, split, rotated, rendered and protected with pdftool (pikepdf, pypdf, pypdfium2)
+version: 2.0.0
+summary: PDFs read, made from HTML or Markdown, merged, split, rotated, rendered and protected with pdftool (PDFium, qpdf, ironpress)
 install:
   - sh fetch.sh
-bin: [bin/pdftool, bin/pdf-python]
-env:
-  PYTHONDONTWRITEBYTECODE: "1"
-  PYTHONNOUSERSITE: "1"
+bin: [bin/pdftool, bin/qpdf]
 # Reading never changes a file; every other command writes a new one and keeps asking.
 rules: ["pdftool info *", "pdftool text *"]
 skills: [skills/pdf]
@@ -15,6 +12,6 @@ requires:
   network: false
 instructions: |
   For PDF files use `pdftool`, already installed (info, text, merge, split, pages, rotate,
-  to-png, compress, encrypt, decrypt, metadata); for anything else, a script run with
-  `pdf-python`, which has pikepdf, pypdf and pypdfium2. Never install Python packages.
-  Load the `pdf` skill first.
+  to-png, compress, encrypt, decrypt, metadata, and from-html / from-md to make a PDF);
+  for anything else, `qpdf`. There is no Python for PDFs any more (pdf-python is gone in
+  2.0.0). Load the `pdf` skill first.

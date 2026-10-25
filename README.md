@@ -10,7 +10,7 @@ installed once by the admin and enabled per project.
 | [**office**](office/) | Create, read, check and edit Word, Excel and PowerPoint files, existing documents included: reports, invoices, spreadsheets with formulas and charts, slide decks | `officecli` ([OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) 1.0.158) | ~35 MB |
 | [**media**](media/) | Cut, join, convert and compress audio and video; extract audio, thumbnails, GIFs and subtitles; inspect any media file | `ffmpeg`, `ffprobe` 7.0.2 (static) | ~160 MB |
 | [**diagrams**](diagrams/) | Flowcharts, sequence, state, class and ER diagrams and XY charts, from Mermaid to SVG, PNG or text, in 15 themes, with no browser | `render-mermaid`, `batch-mermaid`, `list-mermaid-themes` ([Pretty Mermaid](https://github.com/imxv/Pretty-mermaid-skills)) | ~22 MB |
-| [**pdf**](pdf/) | Read a PDF's text and pages, merge, split, keep or delete pages, rotate, render pages to PNG, compress, protect with a password; any other operation in a short Python script | `pdftool`, `pdf-python` (pikepdf, pypdf, pypdfium2 on a private Python 3.12) | ~150 MB |
+| [**pdf**](pdf/) | Read a PDF's text and pages, make a PDF from HTML or Markdown, merge, split, keep or delete pages, rotate, render pages to PNG, compress, protect with a password; anything else with qpdf | `pdftool` (PDFium, ironpress), `qpdf` | ~30 MB |
 | [**images**](images/) | Resize, crop, convert (JPEG, PNG, WebP, AVIF, HEIC, TIFF, GIF), compress for the web, watermark, contact sheets, whole folders | `magick` ([ImageMagick](https://imagemagick.org) 7.1.2), **x64 only** | ~77 MB |
 
 Each needs **Argus 0.7.0 or later**, on Linux x64 or arm64 (`images`: x64 only), with the command sandbox
@@ -96,8 +96,9 @@ To update a program: change its version and hashes in `fetch.sh`, raise `version
 - **The ffmpeg builds** are GPL v3. This repository does not contain them: each
   admin's install downloads them from their publisher. See
   [`media/third-party/ffmpeg/`](media/third-party/ffmpeg/).
-- **The PDF libraries** (pikepdf, pypdf, pypdfium2, Pillow) and Python are under their
-  own open-source licenses, listed in [`pdf/README.md`](pdf/README.md).
+- **PDFium, qpdf and ironpress** are under their own open-source licenses, listed in
+  [`pdf/README.md`](pdf/README.md); their license files come with the release archive
+  the install downloads.
 - **ImageMagick** is under the ImageMagick License; see
   [`images/third-party/`](images/third-party/).
 - **Pretty Mermaid** is MIT and **Inter** is under the SIL Open Font License 1.1; see
