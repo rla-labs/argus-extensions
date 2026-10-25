@@ -1,6 +1,7 @@
-# pdf's native binaries (ironpress with our outline fix, qpdf with native crypto), built
-# on glibc 2.28 for x64 and arm64 by pdf/build/build.sh, and published as the assets of a
-# release named after the tag, with their sha-256. pdf/fetch.sh pins those hashes.
+# pdf's native binaries (pdftool, PDFium, ironpress with our outline fix, qpdf with native
+# crypto), built on glibc 2.28 for x64 and arm64 by pdf/build/build.sh, and published as
+# the assets of a release named after the tag, with their sha-256. pdf/fetch.sh pins
+# those hashes.
 #
 # A tag pdf-bin-<n> builds and publishes; a change to the build on main, a pull request or
 # a manual run only builds.
@@ -10,9 +11,9 @@ on:
   push:
     tags: ['pdf-bin-*']
     branches: [main]
-    paths: ['pdf/build/**', '.github/workflows/pdf-binaries.yml']
+    paths: ['pdf/build/**', 'pdf/pdftool/**', '.github/workflows/pdf-binaries.yml']
   pull_request:
-    paths: ['pdf/build/**', '.github/workflows/pdf-binaries.yml']
+    paths: ['pdf/build/**', 'pdf/pdftool/**', '.github/workflows/pdf-binaries.yml']
   workflow_dispatch:
 
 permissions:
@@ -35,12 +36,12 @@ jobs:
       - name: Pack
         run: |
           sudo chown -R "$(id -u)" out
-          tar -C out/${{ matrix.arch }} -cJf pdf-bin-linux-${{ matrix.arch }}.tar.xz .
-          sha256sum pdf-bin-linux-${{ matrix.arch }}.tar.xz | tee pdf-bin-linux-${{ matrix.arch }}.tar.xz.sha256
+          tar -C out/${{ matrix.arch }} -czf pdf-bin-linux-${{ matrix.arch }}.tar.gz .
+          sha256sum pdf-bin-linux-${{ matrix.arch }}.tar.gz | tee pdf-bin-linux-${{ matrix.arch }}.tar.gz.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: pdf-bin-${{ matrix.arch }}
-          path: pdf-bin-linux-${{ matrix.arch }}.tar.xz*
+          path: pdf-bin-linux-${{ matrix.arch }}.tar.gz*
 
   release:
     if: startsWith(github.ref, 'refs/tags/pdf-bin-')
@@ -56,4 +57,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "pdf's native binaries for pdf/fetch.sh, ironpress and qpdf, built on glibc 2.28 by pdf/build/build.sh. Each archive's sha-256 is beside it." pdf-bin-linux-*
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "pdf's native binaries for pdf/fetch.sh (pdftool, PDFium, ironpress, qpdf), built on glibc 2.28 by pdf/build/build.sh. Each archive's sha-256 is beside it." pdf-bin-linux-*

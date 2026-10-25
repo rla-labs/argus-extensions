@@ -1,0 +1,19 @@
+[package]
+name = "pdftool"
+version = "2.0.0"
+edition = "2021"
+publish = false
+description = "Everyday PDF operations for an Argus project: PDFium reads and renders, qpdf writes, ironpress makes PDFs from HTML and Markdown"
+
+[dependencies]
+pdfium-render = { version = "=0.9.4", default-features = false, features = ["pdfium_latest", "image_latest", "thread_safe"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde_json = "1"
+libc = "0.2"
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true

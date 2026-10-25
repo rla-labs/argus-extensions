@@ -2,14 +2,19 @@
 # Build pdf's native binaries on glibc 2.28, so they run on every distribution Argus
 # supports (Debian 12, Ubuntu 22.04, Rocky 9 and newer):
 #
+# - pdftool (pdf/pdftool), the extension's command;
+# - libpdfium, PDFium's official build (bblanchon/pdfium-binaries), which pdftool loads
+#   to read and render;
 # - ironpress, HTML and Markdown to PDF, with our fix for non-ASCII outline titles
 #   (ironpress-outline.patch, until upstream has it), built small;
 # - qpdf, with its native crypto and zlib and libjpeg linked in: one file, no GnuTLS.
 #
-# Every source is pinned by version and sha-256; Rust's crates by ironpress's Cargo.lock.
+# Every source is pinned by version and sha-256; Rust's crates by each one's Cargo.lock.
+# The output is laid out as the extension is installed: bin/pdftool, bin/qpdf,
+# lib/libpdfium.so, libexec/ironpress, licenses/.
 # Run as root in quay.io/pypa/manylinux_2_28_<arch> (AlmaLinux 8), the repository at /src:
 #   docker run --rm -v "$PWD:/src" -w /src quay.io/pypa/manylinux_2_28_x86_64 pdf/build/build.sh out
-# The binaries and their licences go to <out>/<arch>/.
+# The result goes to <out>/<arch>/.
 set -eu
 
 RUSTUP=1.29.2
@@ -22,18 +27,23 @@ ZLIB=1.3.1
 ZLIB_SHA256=9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23
 JPEG=3.2.0
 JPEG_SHA256=6f30092cef9fb839779646608f4ee14ae3cbac989c47fa05e841b0841f09878e
+PDFIUM=8111
 
 ARCH=$(uname -m)
 case "${ARCH}" in
-  x86_64) RUSTUP_SHA256=5be191e8c70a5007074254cb74d78dbfdd25cd5a61c27de7b8e5410122ec24f4 ;;
-  aarch64) RUSTUP_SHA256=a9c168dbea81a84671c6b7a5c1795cb0eb699020110d107ddfca427bd797e697 ;;
+  x86_64)
+    RUSTUP_SHA256=5be191e8c70a5007074254cb74d78dbfdd25cd5a61c27de7b8e5410122ec24f4
+    PDFIUM_ARCH=x64 PDFIUM_SHA256=bdc60126399f39fe768566a18d4be055a7b3681bc9e248e8a6656b4f6cae0aa2 ;;
+  aarch64)
+    RUSTUP_SHA256=a9c168dbea81a84671c6b7a5c1795cb0eb699020110d107ddfca427bd797e697
+    PDFIUM_ARCH=arm64 PDFIUM_SHA256=042de247138f96341534cccf24ed21c2550a7245b936bb4a60d2340120000f05 ;;
   *) echo "build: no build for ${ARCH}" >&2; exit 1 ;;
 esac
 
 here=$(cd "$(dirname "$0")" && pwd)
 out=$(mkdir -p "${1:?usage: build.sh <out-dir>}/${ARCH}" && cd "$1/${ARCH}" && pwd)
 work=$(mktemp -d)
-mkdir -p "${out}/licenses"
+mkdir -p "${out}/bin" "${out}/lib" "${out}/libexec" "${out}/licenses"
 
 # get <url> <sha256> <file>: download, and stop unless it is what was pinned.
 get() {
@@ -53,6 +63,16 @@ export RUSTUP_HOME="${work}/rustup" CARGO_HOME="${work}/cargo"
 "${work}/rustup-init" -y --quiet --no-modify-path --profile minimal --default-toolchain "${RUST}"
 PATH="${CARGO_HOME}/bin:${PATH}"
 
+# ── pdftool and PDFium ──────────────────────────────────────────────────────
+CARGO_TARGET_DIR="${work}/target" cargo build --quiet --release --locked --manifest-path "${here}/../pdftool/Cargo.toml"
+cp "${work}/target/release/pdftool" "${out}/bin/pdftool"
+get "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/${PDFIUM}/pdfium-linux-${PDFIUM_ARCH}.tgz" "${PDFIUM_SHA256}" pdfium.tgz
+mkdir -p "${work}/pdfium"
+tar -xzf "${work}/pdfium.tgz" -C "${work}/pdfium"
+cp "${work}/pdfium/lib/libpdfium.so" "${out}/lib/libpdfium.so"
+cp "${work}/pdfium/LICENSE" "${out}/licenses/pdfium-LICENSE"
+for license in "${work}"/pdfium/licenses/*; do cp "${license}" "${out}/licenses/pdfium-$(basename "${license}")"; done
+
 # ── ironpress ───────────────────────────────────────────────────────────────
 get "https://static.crates.io/crates/ironpress/ironpress-${IRONPRESS}.crate" "${IRONPRESS_SHA256}" ironpress.crate
 tar -xzf "${work}/ironpress.crate" -C "${work}"
@@ -61,7 +81,7 @@ tar -xzf "${work}/ironpress.crate" -C "${work}"
 CARGO_PROFILE_RELEASE_OPT_LEVEL=s CARGO_PROFILE_RELEASE_LTO=fat CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
   CARGO_PROFILE_RELEASE_PANIC=abort CARGO_PROFILE_RELEASE_STRIP=true \
   cargo build --quiet --release --locked --manifest-path "${work}/ironpress-${IRONPRESS}/Cargo.toml" --target-dir "${work}/target"
-cp "${work}/target/release/ironpress" "${out}/ironpress"
+cp "${work}/target/release/ironpress" "${out}/libexec/ironpress"
 cp "${work}/ironpress-${IRONPRESS}/LICENSE"* "${out}/licenses/ironpress-LICENSE"
 for font in "${work}/ironpress-${IRONPRESS}"/assets/LICENSE-* "${work}/ironpress-${IRONPRESS}"/assets/*/LICENSE*; do
   [ -f "${font}" ] && cp "${font}" "${out}/licenses/ironpress-$(basename "$(dirname "${font}")")-$(basename "${font}")"
@@ -84,22 +104,23 @@ cmake -S "${work}/qpdf-${QPDF}" -B "${work}/qpdf-build" -DCMAKE_BUILD_TYPE=Relea
   -DREQUIRE_CRYPTO_NATIVE=ON -DUSE_IMPLICIT_CRYPTO=OFF \
   -DCMAKE_EXE_LINKER_FLAGS='-static-libstdc++ -static-libgcc' >/dev/null
 cmake --build "${work}/qpdf-build" -j"$(nproc)" --target qpdf >/dev/null
-cp "${work}/qpdf-build/qpdf/qpdf" "${out}/qpdf"
-strip "${out}/qpdf"
+cp "${work}/qpdf-build/qpdf/qpdf" "${out}/bin/qpdf"
+strip "${out}/bin/qpdf"
 cp "${work}/qpdf-${QPDF}/LICENSE.txt" "${out}/licenses/qpdf-LICENSE.txt"
 cp "${work}/qpdf-${QPDF}/NOTICE.md" "${out}/licenses/qpdf-NOTICE.md"
 cp "${work}/zlib-${ZLIB}/LICENSE" "${out}/licenses/zlib-LICENSE"
 cp "${work}/libjpeg-turbo-${JPEG}/LICENSE.md" "${out}/licenses/libjpeg-turbo-LICENSE.md"
 
 # zlib and libjpeg are in qpdf itself, from deps/ (only static libraries there).
-if objdump -p "${out}/qpdf" | grep -q 'NEEDED.*\(libz\|libjpeg\)'; then echo "build: qpdf links zlib or libjpeg dynamically" >&2; exit 1; fi
+if objdump -p "${out}/bin/qpdf" | grep -q 'NEEDED.*\(libz\|libjpeg\)'; then echo "build: qpdf links zlib or libjpeg dynamically" >&2; exit 1; fi
 
 # Nothing newer than glibc 2.28, and nothing beyond the C library and the loader.
-for bin in ironpress qpdf; do
+for bin in bin/pdftool bin/qpdf libexec/ironpress lib/libpdfium.so; do
   newest=$(objdump -T "${out}/${bin}" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
   echo "${bin}: $(du -h "${out}/${bin}" | cut -f1), needs ${newest}; $(objdump -p "${out}/${bin}" | awk '/NEEDED/ {printf "%s ", $2}')"
 done
-"${out}/qpdf" --version | head -1
-"${out}/ironpress" --version
-(cd "${out}" && sha256sum ironpress qpdf > SHA256SUMS)
+"${out}/bin/qpdf" --version | head -1
+"${out}/libexec/ironpress" --version
+"${out}/bin/pdftool" --version
+(cd "${out}" && sha256sum bin/pdftool bin/qpdf lib/libpdfium.so libexec/ironpress > SHA256SUMS)
 rm -rf "${work}"
