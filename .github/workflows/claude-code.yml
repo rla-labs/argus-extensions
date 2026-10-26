@@ -1,0 +1,22 @@
+name: claude-code
+
+on:
+  push:
+    paths: ['claude-code/**', '.github/workflows/claude-code.yml']
+  pull_request:
+    paths: ['claude-code/**', '.github/workflows/claude-code.yml']
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install, as /ext install runs it
+        working-directory: claude-code
+        run: sh fetch.sh
+      - name: end to end, with a fake Anthropic API and a fake Argus
+        working-directory: claude-code
+        run: node test/e2e.mjs

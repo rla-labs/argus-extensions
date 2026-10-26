@@ -1,0 +1,25 @@
+name: claude-code
+version: 1.0.0
+summary: The project's agent hands a coding task to Claude Code, on your Claude subscription or Anthropic API key, with Argus watching and approving every step
+install:
+  - sh fetch.sh
+mcp:
+  claude-code:
+    command: node
+    args: ["${EXTENSION_DIR}/server/index.mjs"]
+    # The call itself asks, showing the task; then every step Claude Code takes is
+    # decided by the project's own policy, as if the project's agent took it.
+    access: ask
+    # Long tasks: the project's delegate.max_minutes is enforced inside; this is the ceiling.
+    timeout_s: 7200
+    host: [approvals, steps, usage]
+    network: proxy
+    route: anthropic
+skills: [skills/claude-code]
+requires:
+  secrets: []
+  network: true
+instructions: |
+  For code work in this project's folder that takes many steps (a feature, a refactor, a
+  bug to find and fix, tests to make pass), you can hand the task to Claude Code with the
+  `run` tool of the claude-code server. Load the `claude-code` skill first.
