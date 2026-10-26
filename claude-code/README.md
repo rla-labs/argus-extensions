@@ -31,6 +31,9 @@ What it does, and how it is held:
 - Its steps are watched for loops, its turns counted against `delegate.day_turns`, its
   time against `delegate.max_minutes`, its turns per call against `delegate.max_turns`;
   a cancel stops it and everything it started.
+- Its model is the project's choice, `delegate.model` (`sonnet` by default; `opus`, `haiku`, or a
+  model id): through Argus's route it cannot see the subscription's plan, and would otherwise
+  stay on its own default, Opus, which spends a plan fastest.
 - Tools: Bash, Read, Edit, Write, WebFetch, WebSearch, TodoWrite. No MCP servers, plugins,
   subagents or slash commands of its own.
 

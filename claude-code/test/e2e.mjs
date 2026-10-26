@@ -22,6 +22,7 @@ const check = (what, ok, detail = '') => {
 /** A fake Anthropic API answering each turn from a script: a tool call, or text. */
 async function anthropic(script) {
   let turn = 0
+  const models = []
   const server = createHttp((req, res) => {
     let body = ''
     req.on('data', (chunk) => (body += chunk))
@@ -29,6 +30,7 @@ async function anthropic(script) {
       if (!req.url.startsWith('/v1/messages')) return res.writeHead(404).end('{}')
       if (req.url.includes('count_tokens')) return res.writeHead(200, { 'content-type': 'application/json' }).end('{"input_tokens":10}')
       const parsed = JSON.parse(body || '{}')
+      models.push(parsed.model)
       const main = Array.isArray(parsed.tools) && parsed.tools.length > 0
       const step = main ? script[Math.min(turn++, script.length - 1)] : { text: 'title' }
       const events = [['message_start', { type: 'message_start', message: { id: `msg_${turn}`, type: 'message', role: 'assistant', model: parsed.model, content: [], stop_reason: null, usage: { input_tokens: 100, output_tokens: 20, cache_read_input_tokens: 50, cache_creation_input_tokens: 0 } } }]]
@@ -44,7 +46,7 @@ async function anthropic(script) {
     })
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
-  return { url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() }
+  return { url: `http://127.0.0.1:${server.address().port}`, models, close: () => server.close() }
 }
 
 /** A fake Argus host channel: hello, then ask, step and usage as `decide` says. */
@@ -56,7 +58,7 @@ async function argus(root, decide) {
     createInterface({ input: socket }).on('line', (line) => {
       const message = JSON.parse(line)
       let answer
-      if (message.type === 'hello') answer = message.token === HOST_TOKEN ? { ok: true, project: 'site', server: 'claude-code', host: ['approvals', 'steps', 'usage'], limits: { max_turns: 20, max_minutes: 5 }, approval_timeout_s: 60 } : { ok: false, error: { code: 'HOST_MESSAGE_REFUSED', message: 'token' } }
+      if (message.type === 'hello') answer = message.token === HOST_TOKEN ? { ok: true, project: 'site', server: 'claude-code', host: ['approvals', 'steps', 'usage'], limits: { max_turns: 20, max_minutes: 5 }, model: 'haiku', approval_timeout_s: 60 } : { ok: false, error: { code: 'HOST_MESSAGE_REFUSED', message: 'token' } }
       else {
         seen[message.type]?.push(message)
         answer = { ok: true, ...decide(message, seen) }
@@ -122,6 +124,7 @@ try {
     check('its commands see no secret: not the host token, in env or /proc', !seenByBash.includes('SECRET') && seenByBash.includes('ANTHROPIC_AUTH_TOKEN=argus-route'), seenByBash.slice(0, 600))
     check('each turn reported its usage with the model', host.seen.usage.length === 3 && host.seen.usage.every((usage) => typeof usage.model === 'string' && usage.input_tokens === 100 && usage.cached_tokens === 50))
     check('it returned a session to continue', typeof out.session === 'string' && out.session.length > 0)
+    check('it ran on the model Argus chose (delegate.model)', /haiku/.test(api.models.at(-1) ?? ''), JSON.stringify(api.models))
     api.close()
     host.close()
   }

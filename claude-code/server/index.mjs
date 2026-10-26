@@ -125,6 +125,9 @@ class Run {
     this.task = task
     this.session = session
     this.limits = greeting.limits ?? { max_turns: 50, max_minutes: 30 }
+    // The project's choice (delegate.model): through Argus's route Claude Code cannot see
+    // the subscription's plan, and would stay on its own default.
+    this.model = typeof greeting.model === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/.test(greeting.model) ? greeting.model : 'sonnet'
     this.approvalSeconds = Number(greeting.approval_timeout_s ?? 1800)
     this.marker = randomUUID()
     this.stopped = undefined
@@ -206,7 +209,7 @@ class Run {
       JSON.stringify({ hooks: { PreToolUse: hook(this.approvalSeconds + 60), PostToolUse: hook(60) }, permissions: { defaultMode: 'dontAsk' } }, null, 2),
     )
 
-    const args = ['-p', this.task, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'dontAsk', '--setting-sources', 'user', '--tools', TOOLS, '--strict-mcp-config', '--disable-slash-commands', '--max-turns', String(this.limits.max_turns)]
+    const args = ['-p', this.task, '--output-format', 'stream-json', '--verbose', '--permission-mode', 'dontAsk', '--setting-sources', 'user', '--tools', TOOLS, '--strict-mcp-config', '--disable-slash-commands', '--max-turns', String(this.limits.max_turns), '--model', this.model]
     if (this.session !== undefined) args.push('--resume', this.session)
     const proxy = process.env.HTTPS_PROXY
     const env = {
