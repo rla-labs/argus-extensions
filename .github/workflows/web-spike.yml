@@ -1,0 +1,105 @@
+name: web-spike
+
+# Argus 0.8.2 spike: build Obscura from source (pinned tag), then compare it with
+# Lightpanda and Chromium on real pages. Results are pushed to the web-spike-results
+# branch as text. Temporary: removed once the spike's report is written.
+on:
+  push:
+    paths: ['web-spike/**', '.github/workflows/web-spike.yml']
+  workflow_dispatch:
+
+env:
+  OBSCURA_TAG: v0.2.5
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    # The Argus image's base: the binary must run on its glibc (2.36).
+    container: rust:1-bookworm
+    timeout-minutes: 180
+    steps:
+      - name: source
+        run: |
+          apt-get update -qq && apt-get install -y -qq curl ca-certificates perl make binutils file >/dev/null
+          curl -fsSL -o obscura.tar.gz "https://codeload.github.com/h4ckf0r0day/obscura/tar.gz/refs/tags/${OBSCURA_TAG}"
+          sha256sum obscura.tar.gz | tee build-${{ matrix.arch }}.txt
+          mkdir src && tar -xzf obscura.tar.gz -C src --strip-components=1
+          echo "crates: $(grep -c '^name = ' src/Cargo.lock)" >> build-${{ matrix.arch }}.txt
+          grep -A1 '^name = "v8"' src/Cargo.lock >> build-${{ matrix.arch }}.txt
+          find src -name build.rs >> build-${{ matrix.arch }}.txt
+      - name: build (render, no stealth)
+        working-directory: src
+        run: |
+          rustc --version >> ../build-${{ matrix.arch }}.txt
+          start=$(date +%s)
+          cargo build --profile release-dist -p obscura-cli --bins --features render 2>&1 | tail -5
+          echo "build seconds: $(( $(date +%s) - start ))" >> ../build-${{ matrix.arch }}.txt
+      - name: describe
+        run: |
+          mkdir -p out && cp src/target/release-dist/obscura src/target/release-dist/obscura-worker out/
+          {
+            ls -la out
+            file out/obscura
+            echo "glibc needed: $(objdump -T out/obscura | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)"
+            echo "dynamic libraries:"; ldd out/obscura
+            out/obscura --version || true
+            out/obscura --help | head -40
+          } >> build-${{ matrix.arch }}.txt 2>&1
+          sha256sum out/* >> build-${{ matrix.arch }}.txt
+          cat build-${{ matrix.arch }}.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obscura-${{ matrix.arch }}
+          path: |
+            out
+            build-${{ matrix.arch }}.txt
+
+  compare:
+    needs: build
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: engines
+        run: |
+          chmod +x art/obscura-x86_64/out/*
+          curl -fsSL -o lightpanda https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-x86_64-linux && chmod +x lightpanda
+          npx -y @puppeteer/browsers install chrome-headless-shell@stable --path "$PWD/chrome" > chrome.txt
+          echo "CHROME=$(find "$PWD/chrome" -type f -name chrome-headless-shell | head -1)" >> "$GITHUB_ENV"
+          sudo apt-get install -y -qq time >/dev/null
+      - name: pages
+        run: python3 web-spike/run.py art/obscura-x86_64/out/obscura ./lightpanda "$CHROME" results
+      - name: scrape (all pages, parallel)
+        run: |
+          cd art/obscura-x86_64/out
+          grep -v '^#' "$GITHUB_WORKSPACE/web-spike/sites.txt" > urls.txt
+          /usr/bin/time -v ./obscura scrape $(cat urls.txt) --concurrency 10 --eval document.title --format json --quiet > "$GITHUB_WORKSPACE/results/scrape.json" 2> scrape-time.txt || true
+          grep -E 'Elapsed|Maximum resident' scrape-time.txt > "$GITHUB_WORKSPACE/results/scrape-time.txt"
+      - name: MCP form, and the proxy
+        run: |
+          sudo useradd -m spike
+          chmod -R a+rx art
+          sudo iptables -A OUTPUT -m owner --uid-owner spike ! -o lo -j REJECT
+          RUN_AS="sudo -u spike" python3 web-spike/mcp_check.py "$PWD/art/obscura-x86_64/out/obscura" results || true
+      - name: publish the results
+        if: always()
+        run: |
+          mkdir -p results && cp art/*/build-*.txt results/ 2>/dev/null || true
+          git config user.name "web-spike" && git config user.email "web-spike@users.noreply.github.com"
+          git checkout --orphan web-spike-results
+          git rm -rq --cached . && git add -f results && git commit -qm "web spike results, run ${{ github.run_id }}"
+          git push -f origin HEAD:web-spike-results
