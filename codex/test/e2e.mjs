@@ -110,14 +110,16 @@ try {
     const api = await openai([
       { cmd: 'env; echo ---; tr "\\0" "\\n" < /proc/$PPID/environ; echo ---; cat "$CODEX_HOME/config.toml"' },
       { cmd: 'rm -rf ./build' },
+      { cmd: "apply_patch <<'PATCH'\n*** Begin Patch\n*** Add File: notes.txt\n+hi\n*** End Patch\nPATCH" },
       { text: 'done' },
     ])
     const host = await argus(root, allowUnlessRm)
     const out = await run(root, project, api, host, 'look around')
     check('it ran and finished', out.stop_reason === 'completed' && out.result === 'done', JSON.stringify(out))
-    check('each command asked Argus, as the project agent’s own (bash)', host.seen.ask.length === 2 && host.seen.ask.every((ask) => ask.tool === 'Bash' && ask.as === 'bash'), JSON.stringify(host.seen.ask))
-    check('a project’s .codex/config.toml did not turn the hooks off', host.seen.ask.length === 2)
-    check('the command that ran was reported as a step, the refused one was not', host.seen.step.length === 1)
+    check('each command asked Argus, as the project agent’s own (bash)', host.seen.ask.length === 3 && host.seen.ask.slice(0, 2).every((ask) => ask.tool === 'Bash' && ask.as === 'bash'), JSON.stringify(host.seen.ask))
+    check('a patch through the shell asked as a write of its file', host.seen.ask[2]?.as === 'write' && host.seen.ask[2]?.arguments.file_path === 'notes.txt', JSON.stringify(host.seen.ask[2]))
+    check('a project’s .codex/config.toml did not turn the hooks off', host.seen.ask.length === 3)
+    check('what ran was reported as steps (the patch from its file change), the refused one was not', host.seen.step.length === 2 && host.seen.step[1]?.tool === 'apply_patch' && host.seen.step[1]?.arguments.file_path === 'notes.txt' && existsSync(join(project, 'notes.txt')), JSON.stringify(host.seen.step.map((step) => [step.tool, step.ok, step.result.slice(0, 200)])))
     const seenByBash = host.seen.step[0]?.result ?? ''
     check('its commands see no secret: not the host token, in env, /proc or its config', seenByBash.length > 0 && !seenByBash.includes('SECRET') && seenByBash.includes('argus-route'), seenByBash.slice(0, 600))
     check('it asked for the model Argus chose (delegate.codex_model)', api.requests.every((request) => request.model === 'gpt-test'), JSON.stringify(api.requests))

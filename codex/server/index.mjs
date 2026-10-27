@@ -97,8 +97,13 @@ function patchFiles(patch) {
 /** A Codex tool call as the Argus tool whose rules decide it, and its arguments. */
 function asArgus(tool, input = {}) {
   switch (tool) {
-    case 'Bash':
-      return { as: 'bash', arguments: { command: String(input.command ?? input.cmd ?? '') } }
+    case 'Bash': {
+      // Codex edits files with `apply_patch <<PATCH … PATCH` through the shell: judged as the
+      // write it is, so the project's rules for files decide it, not its rules for commands.
+      const command = String(input.command ?? input.cmd ?? '')
+      if (/^\s*apply_patch\b/.test(command) && patchFiles(command).length > 0) return asArgus('apply_patch', { patch: command })
+      return { as: 'bash', arguments: { command } }
+    }
     case 'apply_patch':
     case 'Edit':
     case 'Write': {
@@ -178,16 +183,20 @@ class Run {
       if (answer.ok && answer.decision === 'allow') return { decision: 'allow', reason: String(answer.reason ?? 'allowed') }
       return { decision: 'deny', reason: String(answer.reason ?? answer.error?.message ?? 'not allowed') }
     }
-    if (event.hook_event_name === 'PostToolUse') {
-      this.steps += 1
+    // A patch has no PostToolUse; its file_change event reports it (see event()).
+    if (event.hook_event_name === 'PostToolUse' && as !== 'write') {
       const response = event.tool_response ?? {}
-      const ok = !(response.exit_code !== undefined && response.exit_code !== 0) && response.is_error !== true
-      const answer = await host.request({ type: 'step', tool: event.tool_name, arguments: args, ok, result: JSON.stringify(response).slice(0, RESULT_MAX) })
-      if (answer.ok && answer.continue === false) this.stop(String(answer.reason ?? 'Argus stopped it'))
-      else if (this.steps >= this.limits.max_turns) this.stop(`it took ${this.limits.max_turns} steps (delegate.max_turns)`)
-      return {}
+      await this.step(event.tool_name, args, !(response.exit_code !== undefined && response.exit_code !== 0) && response.is_error !== true, response)
     }
     return {}
+  }
+
+  /** One step done, told to Argus, which watches for loops and may stop it. */
+  async step(tool, args, ok, result) {
+    this.steps += 1
+    const answer = await host.request({ type: 'step', tool, arguments: args, ok, result: JSON.stringify(result).slice(0, RESULT_MAX) })
+    if (answer.ok && answer.continue === false) this.stop(String(answer.reason ?? 'Argus stopped it'))
+    else if (this.steps >= this.limits.max_turns) this.stop(`it took ${this.limits.max_turns} steps (delegate.max_turns)`)
   }
 
   async start(home) {
@@ -286,6 +295,11 @@ class Run {
     }
     if (event.type === 'thread.started') this.sessionId = event.thread_id ?? this.sessionId
     if (event.type === 'item.completed' && event.item?.type === 'agent_message') this.message = String(event.item.text ?? '')
+    if (event.type === 'item.completed' && event.item?.type === 'file_change') {
+      const changes = Array.isArray(event.item.changes) ? event.item.changes : []
+      const file = String(changes[0]?.path ?? '')
+      this.step('apply_patch', { file_path: isAbsolute(file) ? relative(process.cwd(), file) : file }, event.item.status === 'completed', changes).catch(() => {})
+    }
     if (event.type === 'turn.failed') this.failure = String(event.error?.message ?? 'the turn failed')
   }
 
