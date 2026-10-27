@@ -64,42 +64,87 @@ jobs:
 
   compare:
     needs: build
-    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 120
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
+          name: obscura-x86_64
           path: art
       - name: engines
         run: |
-          chmod +x art/obscura-x86_64/out/*
+          sudo install -d -m 755 /opt/spike && sudo cp art/out/* /opt/spike/ && sudo chmod 755 /opt/spike/*
           curl -fsSL -o lightpanda https://github.com/lightpanda-io/browser/releases/download/nightly/lightpanda-x86_64-linux && chmod +x lightpanda
           npx -y @puppeteer/browsers install chrome-headless-shell@stable --path "$PWD/chrome" > chrome.txt
           echo "CHROME=$(find "$PWD/chrome" -type f -name chrome-headless-shell | head -1)" >> "$GITHUB_ENV"
           sudo apt-get install -y -qq time >/dev/null
+          mkdir -p results && cp art/build-*.txt results/
       - name: pages
-        run: python3 web-spike/run.py art/obscura-x86_64/out/obscura ./lightpanda "$CHROME" results
-      - name: scrape (all pages, parallel)
-        run: |
-          cd art/obscura-x86_64/out
-          grep -v '^#' "$GITHUB_WORKSPACE/web-spike/sites.txt" > urls.txt
-          /usr/bin/time -v ./obscura scrape $(cat urls.txt) --concurrency 10 --eval document.title --format json --quiet > "$GITHUB_WORKSPACE/results/scrape.json" 2> scrape-time.txt || true
-          grep -E 'Elapsed|Maximum resident' scrape-time.txt > "$GITHUB_WORKSPACE/results/scrape-time.txt"
+        # Set to 1 to compare the engines on every page again (round 1 has the table).
+        if: env.PAGES == '1'
+        env:
+          PAGES: '0'
+        run: python3 web-spike/run.py /opt/spike/obscura ./lightpanda "$CHROME" results
       - name: MCP form, and the proxy
         run: |
           sudo useradd -m spike
-          chmod -R a+rx art
           sudo iptables -A OUTPUT -m owner --uid-owner spike ! -o lo -j REJECT
-          RUN_AS="sudo -u spike" python3 web-spike/mcp_check.py "$PWD/art/obscura-x86_64/out/obscura" results || true
-      - name: publish the results
+          RUN_AS="sudo -u spike" python3 web-spike/mcp_check.py /opt/spike/obscura results || true
+      - uses: actions/upload-artifact@v4
         if: always()
+        with:
+          name: results-compare
+          path: results
+
+  confined:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: obscura-x86_64
+          path: art
+      - name: Obscura as an extension, in the real Argus image, confined
         run: |
-          mkdir -p results && cp art/*/build-*.txt results/ 2>/dev/null || true
+          mkdir -p results
+          { echo "kernel: $(uname -r)"; echo "landlock: $(cat /sys/kernel/security/lsm 2>/dev/null)"; } > results/confined.txt
+          # The extension, with the binaries this run built, as its own repository.
+          cp -r web-spike/ext /tmp/extsrc && mkdir -p /tmp/extsrc/web/bin && cp art/out/* /tmp/extsrc/web/bin/
+          git -C /tmp/extsrc init -q && git -C /tmp/extsrc add -A && git -C /tmp/extsrc -c user.name=s -c user.email=s@s commit -qm spike
+          curl -fsSL -o /tmp/check.mjs https://raw.githubusercontent.com/rla-labs/argus/v0.8.1/scripts/extension-check.mjs
+          docker pull -q ghcr.io/rla-labs/argus:0.8.1
+          docker volume create spike
+          docker run --rm -u 0 -v spike:/data --entrypoint chown ghcr.io/rla-labs/argus:0.8.1 10001:10001 /data
+          docker run --rm -i -v spike:/data -v /tmp/extsrc:/src:ro \
+            --read-only --tmpfs /tmp:size=256m,mode=1777,exec \
+            --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 512 \
+            --workdir /app/packages/argus-agent -v /tmp/check.mjs:/check.mjs:ro \
+            --entrypoint node ghcr.io/rla-labs/argus:0.8.1 /check.mjs /app /data /src 2>&1 | tee -a results/confined.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-confined
+          path: results
+
+  publish:
+    needs: [compare, confined]
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: web-spike-results
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          path: run-${{ github.run_number }}
+      - name: commit
+        run: |
           git config user.name "web-spike" && git config user.email "web-spike@users.noreply.github.com"
-          git checkout --orphan web-spike-results
-          git rm -rq --cached . && git add -f results && git commit -qm "web spike results, run ${{ github.run_id }}"
-          git push -f origin HEAD:web-spike-results
+          git add -f "run-${{ github.run_number }}" && git commit -qm "web spike results, run ${{ github.run_number }}"
+          git push origin HEAD:web-spike-results

@@ -1,0 +1,9 @@
+name: web
+version: 0.0.1
+summary: Spike only (Argus 0.8.2) - Obscura under Argus's confinement, in the real image
+install:
+  - sh fetch.sh
+bin: [bin/obscura, bin/obscura-worker]
+requires:
+  secrets: []
+  network: true

@@ -111,6 +111,9 @@ done = subprocess.run(AS + [OBSCURA, '--proxy', f'http://127.0.0.1:{port}', 'fet
 say(f'proxy fetch: exit {done.returncode}, {len(done.stdout)} bytes; requests through the proxy: {len(hosts)}')
 say('  ' + '\n  '.join(sorted(set(hosts))[:30]))
 direct = subprocess.run(AS + [OBSCURA, 'fetch', 'https://www.theverge.com/', '--dump', 'text', '--quiet'], capture_output=True, timeout=120)
+for wait in (['--wait-until', 'networkidle0'], ['--wait', '15']):
+    retry = subprocess.run([OBSCURA, 'fetch', 'https://techcrunch.com/category/artificial-intelligence/', '--dump', 'markdown', '--quiet', '--timeout', '60'] + wait, capture_output=True, timeout=120)
+    say(f"techcrunch again {' '.join(wait)}: exit {retry.returncode}, {len(retry.stdout)} bytes; stderr {retry.stderr.decode(errors='replace')[:300]}")
 say(f'the same without the proxy, direct connections rejected: exit {direct.returncode}, {len(direct.stdout)} bytes (expect nothing)')
 done = subprocess.run(AS + [OBSCURA, '--proxy', f'http://127.0.0.1:{port}', 'fetch', 'http://127.0.0.1:9/', '--dump', 'text', '--quiet'], capture_output=True, timeout=60)
 say(f"private address refused by default: exit {done.returncode}, {done.stderr.decode(errors='replace').strip()[:200]}")
