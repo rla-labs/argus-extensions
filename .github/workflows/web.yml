@@ -1,0 +1,43 @@
+# web: installed as /ext install runs it, its smoke test, then installed and run confined
+# in the real Argus image by Argus's own extension check.
+name: web
+
+on:
+  push:
+    paths: ['web/**', '!web/build/**', '.github/workflows/web.yml']
+  pull_request:
+    paths: ['web/**', '!web/build/**', '.github/workflows/web.yml']
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install, as /ext install runs it
+        working-directory: web
+        run: sh fetch.sh
+      - name: smoke
+        working-directory: web
+        run: sh test/smoke.sh
+
+  confined:
+    runs-on: ubuntu-24.04
+    env:
+      ARGUS: '0.8.1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: installed and run confined in the Argus image (extension-check)
+        run: |
+          mkdir -p /tmp/extsrc && cp -r web /tmp/extsrc/ && rm -rf /tmp/extsrc/web/bin /tmp/extsrc/web/licenses
+          git -C /tmp/extsrc init -q && git -C /tmp/extsrc add -A && git -C /tmp/extsrc -c user.name=ci -c user.email=ci@ci commit -qm web
+          curl -fsSL -o /tmp/check.mjs "https://raw.githubusercontent.com/rla-labs/argus/v${ARGUS}/scripts/extension-check.mjs"
+          docker volume create data
+          docker run --rm -u 0 -v data:/data --entrypoint chown "ghcr.io/rla-labs/argus:${ARGUS}" 10001:10001 /data
+          docker run --rm -v data:/data -v /tmp/extsrc:/src:ro \
+            --read-only --tmpfs /tmp:size=256m,mode=1777,exec \
+            --cap-drop ALL --security-opt no-new-privileges:true --pids-limit 512 \
+            --workdir /app/packages/argus-agent -v /tmp/check.mjs:/check.mjs:ro \
+            --entrypoint node "ghcr.io/rla-labs/argus:${ARGUS}" /check.mjs /app /data /src

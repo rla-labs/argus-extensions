@@ -1,0 +1,58 @@
+name: web
+version: 1.0.0
+summary: Pages read as Markdown, links followed, forms filled, with Obscura (a light headless browser, no Chromium), through Argus's proxy only
+install:
+  - sh fetch.sh
+mcp:
+  web:
+    command: ${EXTENSION_DIR}/bin/obscura
+    args: [mcp]
+    # Every connection only through Argus's egress proxy, held by the kernel (it reads
+    # HTTPS_PROXY, which Argus sets): the public internet only, never the server, its
+    # network or the metadata service. Obscura refuses private addresses itself as well.
+    network: proxy
+    access: ask
+    tools:
+      # Reading runs unasked; what acts on a page asks; code in the page, cookies and
+      # saved sessions are refused. A project can change any of them.
+      browser_navigate: allow
+      browser_markdown: allow
+      browser_links: allow
+      browser_snapshot: allow
+      browser_interactive_elements: allow
+      browser_detect_forms: allow
+      browser_extract: allow
+      browser_search: allow
+      browser_count: allow
+      browser_get_attribute: allow
+      browser_wait_for: allow
+      browser_wait_for_text: allow
+      browser_scroll: allow
+      browser_back: allow
+      browser_forward: allow
+      browser_reload: allow
+      browser_tab_new: allow
+      browser_tab_list: allow
+      browser_tab_switch: allow
+      browser_tab_close: allow
+      browser_close: allow
+      browser_console_messages: allow
+      browser_network_requests: allow
+      browser_screenshot: allow
+      browser_pdf: allow
+      browser_clear_cookies: allow
+      browser_evaluate: deny
+      browser_wait_for_function: deny
+      browser_get_cookies: deny
+      browser_set_cookie: deny
+      browser_storage_state: deny
+      browser_set_storage_state: deny
+    timeout_s: 90
+skills: [skills/web]
+requires:
+  secrets: []
+  network: true
+instructions: |
+  You have a light headless browser (tools mcp__web__…): pages as Markdown, links, forms.
+  Use it for pages web_fetch cannot read (built by JavaScript) and for many pages in a row.
+  Load the `web` skill first. It reaches the public internet only.

@@ -7,3 +7,5 @@ pdf/licenses/
 pdf/SHA256SUMS
 claude-code/claude/
 codex/codex/
+web/bin/
+web/licenses/
