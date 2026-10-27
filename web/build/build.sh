@@ -7,7 +7,7 @@
 # V8 is Deno's prebuilt static library (rusty_v8; building V8 itself takes hours): the
 # archive is downloaded here, checked against the sha-256 recorded below, and handed to
 # the v8 crate's build script through $CARGO_HOME/.rusty_v8, so it downloads nothing
-# itself; after the build the library it linked is checked again.
+# itself; after the build, its output must say it took that file.
 set -eu
 
 OBSCURA=v0.2.5
@@ -17,12 +17,10 @@ case "$(uname -m)" in
   x86_64)
     ARCH=x86_64
     V8_GZ_SHA256=5869fdb7071b1f21f200a97ce97d20125877e0f31cd802ed99de2c53f488b06c
-    V8_LIB_SHA256=453df8763f06442fc27d034d2fa3099fa606be67fa99da04324e1733c02f18c1
     ;;
   aarch64)
     ARCH=aarch64
     V8_GZ_SHA256=b7177d52ad3337272fe0d3b8e778239c821a95c25d5959dec62b9efd654f7dd3
-    V8_LIB_SHA256=e108b9e6d8ccc45409bac7543c41ccc7c1129e0cb23b00b23450ff8d1fc90a16
     ;;
   *) echo "web: no build for $(uname -m)" >&2; exit 1 ;;
 esac
@@ -43,14 +41,13 @@ echo "${V8_GZ_SHA256}  ${seeded}" | sha256sum -c -
 
 cd "${work}/src"
 cargo build --locked --profile release-dist -p obscura-cli --bins --features render
-linked="$(find target -path '*gn_out/obj/librusty_v8.a' | head -1)"
-[ -n "${linked}" ] || { echo "web: the V8 library the build linked was not found" >&2; exit 1; }
-echo "${V8_LIB_SHA256}  ${linked}" | sha256sum -c -
+# The v8 crate's build script says which archive it took: it must be the one checked above.
+grep -rqsF "Copying ${seeded}" target/release-dist/build/v8-*/output \
+  || { echo "web: the build did not take the checked V8 archive" >&2; grep -hs 'Downloading\|Copying\|Looking' target/release-dist/build/v8-*/output >&2; exit 1; }
 
 mkdir -p "${out}/bin" "${out}/licenses"
 cp target/release-dist/obscura target/release-dist/obscura-worker "${out}/bin/"
-cp LICENSE* "${out}/licenses/" 2>/dev/null || true
-for name in "${out}"/licenses/LICENSE*; do [ -e "${name}" ] && mv "${name}" "${out}/licenses/obscura-$(basename "${name}")"; done
+cp LICENSE "${out}/licenses/obscura-LICENSE"
 # Every crate linked in, with its licence (V8 is BSD-3-Clause, rusty_v8 MIT).
 cargo metadata --locked --format-version 1 \
   | jq -r '.packages[] | select(.source != null) | "\(.name) \(.version)\t\(.license // "see its repository")\t\(.repository // "")"' \
