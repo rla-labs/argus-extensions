@@ -1,0 +1,60 @@
+# web's Obscura binaries, built from source by web/build/build.sh in rust:1.99.1-bookworm
+# (glibc 2.36, the Argus image's) for x64 and arm64, and published as the assets of a
+# release named after the tag, with their sha-256. web/fetch.sh pins those hashes.
+#
+# A tag web-bin-<n> builds and publishes; a change to the build on main, a pull request or
+# a manual run only builds.
+name: web binaries
+
+on:
+  push:
+    tags: ['web-bin-*']
+    branches: [main]
+    paths: ['web/build/**', '.github/workflows/web-binaries.yml']
+  pull_request:
+    paths: ['web/build/**', '.github/workflows/web-binaries.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build in rust:1.99.1-bookworm
+        run: docker run --rm -v "$PWD:/src" -w /src rust:1.99.1-bookworm web/build/build.sh out
+      - name: Pack
+        run: |
+          sudo chown -R "$(id -u)" out
+          tar -C out/${{ matrix.arch }} -czf web-bin-linux-${{ matrix.arch }}.tar.gz .
+          sha256sum web-bin-linux-${{ matrix.arch }}.tar.gz | tee web-bin-linux-${{ matrix.arch }}.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-bin-${{ matrix.arch }}
+          path: web-bin-linux-${{ matrix.arch }}.tar.gz*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/web-bin-')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "web's Obscura binaries for web/fetch.sh (obscura, obscura-worker; Obscura v0.2.5 from source, Deno's prebuilt V8 150.4.0 checked by hash), built in rust:1.99.1-bookworm by web/build/build.sh. Each archive's sha-256 is beside it." web-bin-linux-*
