@@ -43,7 +43,8 @@ echo "${V8_GZ_SHA256}  ${seeded}" | sha256sum -c -
 
 cd "${work}/src"
 cargo build --locked --profile release-dist -p obscura-cli --bins --features render
-linked="$(find target/release-dist/build -path '*gn_out/obj/librusty_v8.a' | head -1)"
+linked="$(find target -path '*gn_out/obj/librusty_v8.a' | head -1)"
+[ -n "${linked}" ] || { echo "web: the V8 library the build linked was not found" >&2; exit 1; }
 echo "${V8_LIB_SHA256}  ${linked}" | sha256sum -c -
 
 mkdir -p "${out}/bin" "${out}/licenses"
