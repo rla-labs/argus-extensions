@@ -7,9 +7,11 @@ counts each of its requests, as it does for the project's own agent.
 
 ```
 /ext install https://github.com/rla-labs/argus-extensions#codex
-/key openai <key>                  # an OpenAI API key; Codex runs on it only
+/key openai <key>                  # an OpenAI API key; or, with codex_provider: openrouter,
+                                   # /key openrouter <key>
 /ext enable <project> codex
 /set <project> delegate.codex_model <model id>    # optional: Codex's default otherwise
+/set <project> delegate.codex_provider openrouter  # optional: OpenRouter instead of OpenAI
 ```
 
 How it is held:

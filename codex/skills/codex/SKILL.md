@@ -12,7 +12,7 @@ description: |
 done, then returns its last message, the files it changed, a `session`, and why it
 stopped. Every command it runs and every file it changes is decided by this project's
 rules, exactly as yours are: what you would be asked about, it is asked about too, and a
-refusal stops that command, not the task. It runs on Argus's OpenAI API key; each of its
+refusal stops that command, not the task. It runs on Argus's API key (OpenAI or OpenRouter); each of its
 requests is a cost against this project's budget.
 
 ## When to use it

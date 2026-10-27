@@ -3,7 +3,7 @@
 // No dependencies: Node's own modules only.
 //
 // Codex runs:
-//  - on Argus's OpenAI API key, through the route Argus gives this server
+//  - on Argus's OpenAI (or OpenRouter) API key, through the route Argus gives this server
 //    (ARGUS_OPENAI_BASE_URL): the key is never in its environment, and Argus counts every
 //    request from OpenAI's own answer (this server reports no usage);
 //  - with its own sandbox off (Argus confines it) and approvals off, behind hooks to this
@@ -26,7 +26,7 @@ const HOOK = join(EXTENSION, 'server', 'hook.sh')
 const RESULT_MAX = 4000
 /** Codex features the delegated agent must not have: the model gets the shell and images. */
 const FEATURES_OFF = ['apps', 'browser_use', 'browser_use_external', 'browser_annotation_api', 'computer_use', 'code_mode_host', 'goals', 'image_generation', 'in_app_browser', 'multi_agent', 'plugins', 'remote_plugin', 'plugin_sharing', 'skill_mcp_dependency_install', 'skill_search', 'daemon_auto_start', 'guardian_approval']
-const MODEL = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/
+const MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}$/
 
 const send = (message) => process.stdout.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`)
 const log = (text) => process.stderr.write(`codex: ${text}\n`)
