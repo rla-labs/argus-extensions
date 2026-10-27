@@ -4,10 +4,11 @@
 # in rust:<pinned>-bookworm (glibc 2.36, the Argus image's); writes <out>/<arch>/: bin/obscura,
 # bin/obscura-worker, licenses/.
 #
-# V8 is Deno's prebuilt static library (rusty_v8; building V8 itself takes hours): the
-# archive is downloaded here, checked against the sha-256 recorded below, and handed to
-# the v8 crate's build script through $CARGO_HOME/.rusty_v8, so it downloads nothing
-# itself; after the build, its output must say it took that file.
+# V8 is Deno's prebuilt static library (rusty_v8's simdutf variant, which deno_core asks
+# for; building V8 itself takes hours): the archive is downloaded here, checked against
+# the sha-256 recorded below, and handed to the v8 crate's build script through
+# $CARGO_HOME/.rusty_v8, so it downloads nothing itself; after the build, its output must
+# say it took that file.
 set -eu
 
 OBSCURA=v0.2.5
@@ -16,11 +17,11 @@ V8=150.4.0
 case "$(uname -m)" in
   x86_64)
     ARCH=x86_64
-    V8_GZ_SHA256=5869fdb7071b1f21f200a97ce97d20125877e0f31cd802ed99de2c53f488b06c
+    V8_GZ_SHA256=f48762ca10d1f1fc605a441c5ae430ec8ce1e9e80f14d78fbc42cb878c30b476
     ;;
   aarch64)
     ARCH=aarch64
-    V8_GZ_SHA256=b7177d52ad3337272fe0d3b8e778239c821a95c25d5959dec62b9efd654f7dd3
+    V8_GZ_SHA256=539e283815a396a5796f32858b42e517b858ebaaeaaad05d03290ee8c864a527
     ;;
   *) echo "web: no build for $(uname -m)" >&2; exit 1 ;;
 esac
@@ -33,7 +34,7 @@ curl -fsSL --proto '=https' -o "${work}/obscura.tar.gz" "https://codeload.github
 echo "${OBSCURA_SHA256}  ${work}/obscura.tar.gz" | sha256sum -c -
 mkdir "${work}/src" && tar -xzf "${work}/obscura.tar.gz" -C "${work}/src" --strip-components=1
 
-url="https://github.com/denoland/rusty_v8/releases/download/v${V8}/librusty_v8_release_${ARCH}-unknown-linux-gnu.a.gz"
+url="https://github.com/denoland/rusty_v8/releases/download/v${V8}/librusty_v8_simdutf_release_${ARCH}-unknown-linux-gnu.a.gz"
 mkdir -p "${CARGO_HOME:-${HOME}/.cargo}/.rusty_v8"
 seeded="${CARGO_HOME:-${HOME}/.cargo}/.rusty_v8/$(printf '%s' "${url}" | sed 's/[^A-Za-z0-9]/_/g')"
 curl -fsSL --proto '=https' -o "${seeded}" "${url}"

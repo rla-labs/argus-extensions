@@ -58,4 +58,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "web's Obscura binaries for web/fetch.sh (obscura, obscura-worker; Obscura v0.2.5 from source, Deno's prebuilt V8 150.4.0 checked by hash), built in rust:1.99.1-bookworm by web/build/build.sh. Each archive's sha-256 is beside it." web-bin-linux-*
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --notes "web's Obscura binaries for web/fetch.sh (obscura, obscura-worker; Obscura v0.2.5 from source, Deno's prebuilt V8 150.4.0 (simdutf) checked by hash), built in rust:1.99.1-bookworm by web/build/build.sh. Each archive's sha-256 is beside it." web-bin-linux-*
