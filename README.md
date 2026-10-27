@@ -13,6 +13,7 @@ installed once by the admin and enabled per project.
 | [**pdf**](pdf/) | Read a PDF's text and pages, make a PDF from HTML or Markdown, merge, split, keep or delete pages, rotate, render pages to PNG, compress, protect with a password; anything else with qpdf | `pdftool` (PDFium, ironpress), `qpdf` | ~30 MB |
 | [**images**](images/) | Resize, crop, convert (JPEG, PNG, WebP, AVIF, HEIC, TIFF, GIF), compress for the web, watermark, contact sheets, whole folders | `magick` ([ImageMagick](https://imagemagick.org) 7.1.2), **x64 only** | ~77 MB |
 | [**claude-code**](claude-code/) | Hand a multi-step coding task to Claude Code, on your Claude subscription or Anthropic API key, with Argus approving and watching every step (Argus 0.8.0+) | none in the project's shell: an MCP tool, `run` | ~280 MB |
+| [**codex**](codex/) | Hand a multi-step coding task to OpenAI's Codex, on Argus's OpenAI API key, with Argus approving every step and counting every request (Argus 0.8.1+) | none in the project's shell: an MCP tool, `run` | ~300 MB |
 
 Each needs **Argus 0.7.0 or later**, on Linux x64 or arm64 (`images`: x64 only), with the command sandbox
 (Landlock) available; `argus doctor` says whether it is.
@@ -76,6 +77,7 @@ repository, and each extension records its own `version` in its `extension.yaml`
 - **pdf:** no OCR; a scanned PDF has no text to read.
 - **images:** x64 only.
 - **claude-code:** needs Argus 0.8.0 or later; a subscription is for its subscriber's own use.
+- **codex:** needs Argus 0.8.1 or later; an OpenAI API key only (no ChatGPT subscription).
 - **media:** a long render keeps the server's CPU busy. The skill runs renders as
   background jobs, with `nice`.
 

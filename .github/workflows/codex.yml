@@ -1,0 +1,22 @@
+name: codex
+
+on:
+  push:
+    paths: ['codex/**', '.github/workflows/codex.yml']
+  pull_request:
+    paths: ['codex/**', '.github/workflows/codex.yml']
+
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install, as /ext install runs it
+        working-directory: codex
+        run: sh fetch.sh
+      - name: end to end, with a fake OpenAI API and a fake Argus
+        working-directory: codex
+        run: ARGUS_CODEX_BIN=$PWD/codex/codex node test/e2e.mjs
