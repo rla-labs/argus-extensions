@@ -20,8 +20,9 @@ Each session starts clean.
 ## How
 
 1. `browser_navigate` with the `url`. Its answer names the URL it ended on and the title.
-2. `browser_markdown` to read the page. It stops at 4000 characters unless you pass
-   `max_chars` (e.g. 30000 for a long article). `browser_search` finds a phrase in the page.
+2. `browser_markdown` with `max_chars: 30000` to read the page. Without it, it stops at
+   4000 characters, which on a news site or a listing is often only the menu.
+   `browser_search` finds a phrase in the page.
 3. `browser_links` (`internal_only: true` for the same site) to see where to go next;
    `browser_extract` with CSS selectors for a list (titles, dates, links) in one call.
 4. A form: `browser_detect_forms` or `browser_interactive_elements` (each element has a
