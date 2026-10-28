@@ -1,5 +1,9 @@
 # Argus extension: web
 
+> **Experimental.** Not developed further: it is slow on heavy pages (20–40 s) and renders
+> some pages wrong or not at all. For real browsing use [`browser`](../browser/)
+> (Chromium); for plain pages the agent's `web_fetch` is faster.
+
 A light headless browser for [Argus](https://github.com/rla-labs/argus) projects:
 [Obscura](https://github.com/h4ckf0r0day/obscura) 0.2.5, its own engine with V8 for
 JavaScript, no Chromium and no Node, driven through its MCP server.

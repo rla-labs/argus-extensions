@@ -1,6 +1,6 @@
 name: web
 version: 1.0.0
-summary: Pages read as Markdown, links followed, forms filled, with Obscura (a light headless browser, no Chromium), through Argus's proxy only
+summary: (Experimental) Pages read as Markdown, links followed, forms filled, with Obscura (a light headless browser, no Chromium), through Argus's proxy only
 install:
   - sh fetch.sh
 mcp:
